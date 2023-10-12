@@ -1,0 +1,51 @@
+# ASP.NET Core
+# Build and test ASP.NET Core projects targeting .NET Core.
+# Add steps that run tests, create a NuGet package, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
+
+trigger:
+- main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  buildConfiguration: 'Release'
+  dotnetSdkVersion: '6.0.x' # Replace 'x' with the specific version you want to use
+
+stages:
+- stage: Build
+  jobs:
+  - job: Build
+    displayName: 'Build'
+    steps:
+    - task: UseDotNet@2
+      inputs:
+        packageType: 'sdk'
+        installationPath: $(Agent.ToolsDirectory)/dotnet
+      displayName: 'Use .NET SDK ${{ variables.dotnetSdkVersion }}'
+    
+    - script: dotnet build --configuration $(buildConfiguration)
+      displayName: 'dotnet build $(buildConfiguration)'
+    
+    - task: DotNetCoreCLI@2
+      inputs:
+        command: 'publish'
+        publishWebProjects: false
+        projects: 'sample-dotnet/SampleWebAPIProject.csproj'
+        arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)/publish'
+      displayName: 'Publish'
+
+- stage: Publish
+  jobs:
+  - job: Publish
+    displayName: 'Publish'
+    dependsOn: Build
+    steps:
+    - task: PublishBuildArtifacts@1
+      inputs:
+        pathtoPublish: '$(Build.ArtifactStagingDirectory)/publish'
+        artifactName: 'sample-dotnet'
+      displayName: 'Publish Build Artifact'
+
+
